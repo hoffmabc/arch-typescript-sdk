@@ -1,7 +1,7 @@
 {
   "name": "arch-typescript-sdk",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "This is a basic typescript SDK for interacting with Arch Network",
   "main": "index.js",
   "scripts": {
 		"build": "tsc",
@@ -9,8 +9,8 @@
 		"test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Brian Hoffman",
+  "license": "MIT",
   "devDependencies": {
     "@types/axios": "^0.14.0",
     "@types/node": "^22.5.2",
