@@ -14,17 +14,24 @@ enum Status {
   Processed
 }
 
-// Message type (simplified, as we don't have full details)
-interface Message {
-  instructions: Instruction[];
-  // Add other fields as needed
-}
-
-// Instruction type (simplified, as we don't have full details)
+// AccountMeta type
+interface AccountMeta {
+    pubkey: PublicKey;
+    isSigner: boolean;
+    isWritable: boolean;
+  }
+// Instruction type
 interface Instruction {
-  // Add fields based on the actual Instruction struct
-  hash(): string;
-}
+    program_id: PublicKey;
+    accounts: AccountMeta[];
+    data: number[]; // Equivalent to Vec<u8> in Rust
+  }
+
+  // Message type
+  interface Message {
+    signers: PublicKey[];
+    instructions: Instruction[];
+  }
 
 // RuntimeTransaction type
 interface RuntimeTransaction {
@@ -54,7 +61,7 @@ interface ArchNode {
   is_ready: boolean;
 }
 
-// AccountInfoResult type (already correctly defined in your code)
+// AccountInfoResult type
 interface AccountInfoResult {
   owner: HexString;
   data: number[];
@@ -70,6 +77,8 @@ export type {
   Block,
   ArchNode,
   AccountInfoResult,
-  HexString
+  HexString,
+  Instruction,
+  Message
 };
 export { Status };

@@ -1,12 +1,15 @@
 import axios, { AxiosInstance } from 'axios';
+import { PublicKey } from '@solana/web3.js';
 import {
   NodePubkey,
   RuntimeTransaction,
   ProcessedTransaction,
   Block,
   AccountInfoResult,
-  HexString
-} from './types';
+  HexString,
+  Instruction,
+  Message
+} from './types'; // Assuming types are in a separate file
 
 export class ArchRpcClient {
   private rpc: AxiosInstance;
@@ -37,12 +40,12 @@ export class ArchRpcClient {
     return this.call<boolean>('is_node_ready');
   }
 
-  async getAccountAddress(accountPubkey: NodePubkey): Promise<string> {
-    return this.call<string>('get_account_address', [accountPubkey]);
+  async getAccountAddress(accountPubkey: PublicKey): Promise<string> {
+    return this.call<string>('get_account_address', [accountPubkey.toBase58()]);
   }
 
-  async readAccountInfo(pubkey: HexString): Promise<AccountInfoResult> {
-    return this.call<AccountInfoResult>('read_account_info', [pubkey]);
+  async readAccountInfo(pubkey: PublicKey): Promise<AccountInfoResult> {
+    return this.call<AccountInfoResult>('read_account_info', [pubkey.toBase58()]);
   }
 
   async sendTransaction(transaction: RuntimeTransaction): Promise<HexString> {
@@ -71,5 +74,14 @@ export class ArchRpcClient {
 
   async getProcessedTransaction(txId: HexString): Promise<ProcessedTransaction> {
     return this.call<ProcessedTransaction>('get_processed_transaction', [txId]);
+  }
+
+  // New methods to handle Instructions and Messages
+  async createInstruction(programId: PublicKey, accounts: PublicKey[], data: number[]): Promise<Instruction> {
+    return this.call<Instruction>('create_instruction', [programId.toBase58(), accounts.map(a => a.toBase58()), data]);
+  }
+
+  async createMessage(signers: PublicKey[], instructions: Instruction[]): Promise<Message> {
+    return this.call<Message>('create_message', [signers.map(s => s.toBase58()), instructions]);
   }
 }
