@@ -1,17 +1,12 @@
 import axios, { AxiosInstance } from 'axios';
-
-// Define types based on Rust structs
-type Pubkey = string; // Assuming Pubkey is represented as a string in TypeScript
-type RuntimeTransaction = any; // You may want to define this type more precisely
-type Block = any; // You may want to define this type more precisely
-type ProcessedTransaction = any; // You may want to define this type more precisely
-
-interface AccountInfoResult {
-  owner: Pubkey;
-  data: number[]; // Assuming Vec<u8> is represented as number[] in TypeScript
-  utxo: string;
-  is_executable: boolean;
-}
+import {
+  NodePubkey,
+  RuntimeTransaction,
+  ProcessedTransaction,
+  Block,
+  AccountInfoResult,
+  HexString
+} from './types';
 
 export class ArchRpcClient {
   private rpc: AxiosInstance;
@@ -32,11 +27,9 @@ export class ArchRpcClient {
       method,
       params,
     });
-
     if (response.data.error) {
       throw new Error(response.data.error.message);
     }
-
     return response.data.result;
   }
 
@@ -44,20 +37,20 @@ export class ArchRpcClient {
     return this.call<boolean>('is_node_ready');
   }
 
-  async getAccountAddress(accountPubkey: Uint8Array): Promise<string> {
-    return this.call<string>('get_account_address', [Array.from(accountPubkey)]);
+  async getAccountAddress(accountPubkey: NodePubkey): Promise<string> {
+    return this.call<string>('get_account_address', [accountPubkey]);
   }
 
-  async readAccountInfo(pubkey: Pubkey): Promise<AccountInfoResult> {
+  async readAccountInfo(pubkey: HexString): Promise<AccountInfoResult> {
     return this.call<AccountInfoResult>('read_account_info', [pubkey]);
   }
 
-  async sendTransaction(transaction: RuntimeTransaction): Promise<string> {
-    return this.call<string>('send_transaction', [transaction]);
+  async sendTransaction(transaction: RuntimeTransaction): Promise<HexString> {
+    return this.call<HexString>('send_transaction', [transaction]);
   }
 
-  async sendTransactions(transactions: RuntimeTransaction[]): Promise<string[]> {
-    return this.call<string[]>('send_transactions', [transactions]);
+  async sendTransactions(transactions: RuntimeTransaction[]): Promise<HexString[]> {
+    return this.call<HexString[]>('send_transactions', [transactions]);
   }
 
   async getBlockCount(): Promise<number> {
@@ -68,15 +61,15 @@ export class ArchRpcClient {
     return this.call<void>('start_dkg');
   }
 
-  async getBlockHash(height: number): Promise<string> {
-    return this.call<string>('get_block_hash', [height]);
+  async getBlockHash(height: number): Promise<HexString> {
+    return this.call<HexString>('get_block_hash', [height]);
   }
 
-  async getBlock(hash: string): Promise<Block> {
+  async getBlock(hash: HexString): Promise<Block> {
     return this.call<Block>('get_block', [hash]);
   }
 
-  async getProcessedTransaction(txId: string): Promise<ProcessedTransaction> {
+  async getProcessedTransaction(txId: HexString): Promise<ProcessedTransaction> {
     return this.call<ProcessedTransaction>('get_processed_transaction', [txId]);
   }
 }
