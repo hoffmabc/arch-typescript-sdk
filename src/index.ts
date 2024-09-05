@@ -46,7 +46,7 @@ export class ArchRpcClient {
     });
   }
 
-  private async call<T>(method: string, params: any[] = []): Promise<T> {
+  private async call<T>(method: string, params: any): Promise<T> {
     const response = await this.rpc.post('', {
       jsonrpc: '2.0',
       id: 1,
@@ -60,7 +60,7 @@ export class ArchRpcClient {
   }
 
   async isNodeReady(): Promise<boolean> {
-    return this.call<boolean>('is_node_ready');
+    return this.call<boolean>('is_node_ready', []);
   }
 
   async getAccountAddress(accountPubkey: Pubkey): Promise<string> {
@@ -80,23 +80,23 @@ export class ArchRpcClient {
   }
 
   async getBlockCount(): Promise<number> {
-    return this.call<number>('get_block_count');
+    return this.call<number>('get_block_count', []);
   }
 
   async startDkg(): Promise<void> {
-    return this.call<void>('start_dkg');
+    return this.call<void>('start_dkg', []);
   }
 
   async getBlockHash(height: number): Promise<HexString> {
-    return this.call<HexString>('get_block_hash', [height]);
+    return this.call<HexString>('get_block_hash', height);
   }
 
   async getBlock(hash: HexString): Promise<Block> {
-    return this.call<Block>('get_block', [hash]);
+    return this.call<Block>('get_block', hash);
   }
 
   async getProcessedTransaction(txId: HexString): Promise<ProcessedTransaction> {
-    return this.call<ProcessedTransaction>('get_processed_transaction', [txId]);
+    return this.call<ProcessedTransaction>('get_processed_transaction', txId);
   }
 
   // New methods to handle Instructions and Messages
