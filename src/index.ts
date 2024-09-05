@@ -1,5 +1,4 @@
 import axios, { AxiosInstance } from 'axios';
-import { PublicKey } from '@solana/web3.js';
 import {
   NodePubkey,
   RuntimeTransaction,
@@ -65,11 +64,11 @@ export class ArchRpcClient {
   }
 
   async getAccountAddress(accountPubkey: Pubkey): Promise<string> {
-    return this.call<string>('get_account_address', [accountPubkey.serialize()]);
+    return this.call<string>('get_account_address', accountPubkey.serialize());
   }
 
-  async readAccountInfo(pubkey: PublicKey): Promise<AccountInfoResult> {
-    return this.call<AccountInfoResult>('read_account_info', [pubkey.toBase58()]);
+  async readAccountInfo(pubkey: Pubkey): Promise<AccountInfoResult> {
+    return this.call<AccountInfoResult>('read_account_info', pubkey.serialize());
   }
 
   async sendTransaction(transaction: RuntimeTransaction): Promise<HexString> {
@@ -101,11 +100,11 @@ export class ArchRpcClient {
   }
 
   // New methods to handle Instructions and Messages
-  async createInstruction(programId: PublicKey, accounts: PublicKey[], data: number[]): Promise<Instruction> {
-    return this.call<Instruction>('create_instruction', [programId.toBase58(), accounts.map(a => a.toBase58()), data]);
+  async createInstruction(programId: Pubkey, accounts: Pubkey[], data: number[]): Promise<Instruction> {
+    return this.call<Instruction>('create_instruction', [programId.serialize(), accounts.map(a => a.serialize()), data]);
   }
 
-  async createMessage(signers: PublicKey[], instructions: Instruction[]): Promise<Message> {
-    return this.call<Message>('create_message', [signers.map(s => s.toBase58()), instructions]);
+  async createMessage(signers: Pubkey[], instructions: Instruction[]): Promise<Message> {
+    return this.call<Message>('create_message', [signers.map(s => s.serialize()), instructions]);
   }
 }
