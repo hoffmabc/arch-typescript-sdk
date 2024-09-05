@@ -41,7 +41,11 @@ export class ArchRpcClient {
   }
 
   async getAccountAddress(accountPubkey: PublicKey): Promise<string> {
-    return this.call<string>('get_account_address', [accountPubkey.toBase58()]);
+    const pubkeyBytes = accountPubkey.toBytes();
+    if (pubkeyBytes.length !== 32) {
+      throw new Error('Invalid public key length. Expected 32 bytes.');
+    }
+    return this.call<string>('get_account_address', [Array.from(pubkeyBytes)]);
   }
 
   async readAccountInfo(pubkey: PublicKey): Promise<AccountInfoResult> {
