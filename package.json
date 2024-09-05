@@ -1,22 +1,25 @@
 {
   "name": "arch-typescript-sdk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "This is a basic typescript SDK for interacting with Arch Network",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-		"build": "tsc",
+    "build": "tsc",
     "prepublishOnly": "npm run build",
-		"test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "Brian Hoffman",
   "license": "MIT",
   "devDependencies": {
-    "@types/axios": "^0.14.0",
-    "@types/node": "^22.5.2",
-    "typescript": "^5.5.4"
+    "@types/node": "^20.5.2",
+    "typescript": "^5.1.6"
   },
   "dependencies": {
-    "axios": "^1.7.7"
+    "axios": "^1.4.0"
   }
 }
