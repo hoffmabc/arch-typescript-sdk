@@ -9,7 +9,31 @@ import {
   HexString,
   Instruction,
   Message
-} from './types'; // Assuming types are in a separate file
+} from './types';
+
+export class Pubkey {
+  constructor(public readonly bytes: Uint8Array) {
+    if (bytes.length !== 32) {
+      throw new Error('Pubkey must be 32 bytes');
+    }
+  }
+
+  static fromString(s: string): Pubkey {
+    const bytes = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) {
+      bytes[i] = parseInt(s.slice(i * 2, i * 2 + 2), 16);
+    }
+    return new Pubkey(bytes);
+  }
+
+  toString(): string {
+    return Array.from(this.bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  serialize(): number[] {
+    return Array.from(this.bytes);
+  }
+}
 
 export class ArchRpcClient {
   private rpc: AxiosInstance;
@@ -40,12 +64,8 @@ export class ArchRpcClient {
     return this.call<boolean>('is_node_ready');
   }
 
-  async getAccountAddress(accountPubkey: PublicKey): Promise<string> {
-    const pubkeyBytes = accountPubkey.toBytes();
-    if (pubkeyBytes.length !== 32) {
-      throw new Error('Invalid public key length. Expected 32 bytes.');
-    }
-    return this.call<string>('get_account_address', [Array.from(pubkeyBytes)]);
+  async getAccountAddress(accountPubkey: Pubkey): Promise<string> {
+    return this.call<string>('get_account_address', [accountPubkey.serialize()]);
   }
 
   async readAccountInfo(pubkey: PublicKey): Promise<AccountInfoResult> {
