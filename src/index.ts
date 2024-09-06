@@ -12,6 +12,7 @@ import {
 } from './types';
 import * as secp256k1 from '@noble/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
+import { Buffer } from 'buffer';
 
 export class ArchRpcClient {
   private rpc: AxiosInstance;
