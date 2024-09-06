@@ -5,7 +5,6 @@ import {
   ProcessedTransaction,
   Block,
   AccountInfoResult,
-  HexString,
   Instruction,
   Message
 } from './types';
@@ -71,12 +70,12 @@ export class ArchRpcClient {
     return this.call<AccountInfoResult>('read_account_info', pubkey.serialize());
   }
 
-  async sendTransaction(transaction: RuntimeTransaction): Promise<HexString> {
-    return this.call<HexString>('send_transaction', [transaction]);
+  async sendTransaction(transaction: RuntimeTransaction): Promise<string> {
+    return this.call<string>('send_transaction', [transaction]);
   }
 
-  async sendTransactions(transactions: RuntimeTransaction[]): Promise<HexString[]> {
-    return this.call<HexString[]>('send_transactions', [transactions]);
+  async sendTransactions(transactions: RuntimeTransaction[]): Promise<string[]> {
+    return this.call<string[]>('send_transactions', [transactions]);
   }
 
   async getBlockCount(): Promise<number> {
@@ -87,15 +86,15 @@ export class ArchRpcClient {
     return this.call<void>('start_dkg', []);
   }
 
-  async getBlockHash(height: number): Promise<HexString> {
-    return this.call<HexString>('get_block_hash', height);
+  async getBlockHash(height: number): Promise<string> {
+    return this.call<string>('get_block_hash', height);
   }
 
-  async getBlock(hash: HexString): Promise<Block> {
+  async getBlock(hash: string): Promise<Block> {
     return this.call<Block>('get_block', hash);
   }
 
-  async getProcessedTransaction(txId: HexString): Promise<ProcessedTransaction> {
+  async getProcessedTransaction(txId: string): Promise<ProcessedTransaction> {
     return this.call<ProcessedTransaction>('get_processed_transaction', txId);
   }
 

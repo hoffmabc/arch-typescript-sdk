@@ -2,9 +2,6 @@ import { PublicKey } from '@solana/web3.js'; // Using PublicKey instead of Signa
 
 type Signature = string; // Define Signature as a string type
 
-// Utility type for hexadecimal strings
-type HexString = string;
-
 // NodePubkey type
 type NodePubkey = number[]; // Equivalent to Vec<u8> in Rust
 
@@ -49,8 +46,11 @@ interface ProcessedTransaction {
 
 // Block type
 interface Block {
-  transactions: HexString[];
-  previous_block_hash: HexString;
+  transactions: string[];
+  previous_block_hash: string;
+  transaction_count: number;
+  timestamp: number;
+  merkle_root: string;
 }
 
 // ArchNode type
@@ -63,7 +63,7 @@ interface ArchNode {
 
 // AccountInfoResult type
 interface AccountInfoResult {
-  owner: HexString;
+  owner: string;
   data: number[];
   utxo: string;
   is_executable: boolean;
@@ -77,7 +77,6 @@ export type {
   Block,
   ArchNode,
   AccountInfoResult,
-  HexString,
   Instruction,
   Message
 };
