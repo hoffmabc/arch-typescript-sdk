@@ -16,7 +16,8 @@ import { Buffer } from 'buffer';
 
 export class ArchRpcClient {
   private rpc: AxiosInstance;
-  
+  private id: number = 0;
+ 
   constructor(url: string) {
     this.rpc = axios.create({
       baseURL: url,
@@ -27,12 +28,13 @@ export class ArchRpcClient {
   }
 
   private async call<T>(method: string, params: any): Promise<T> {
-    const response = await this.rpc.post('', {
+    const payload = {
       jsonrpc: '2.0',
-      id: 1,
+      id: 'curlycurl',
       method,
       params,
-    });
+    };
+    const response = await this.rpc.post('', payload);
     if (response.data.error) {
       throw new Error(response.data.error.message);
     }
@@ -68,6 +70,42 @@ export class ArchRpcClient {
     };
   }
 
+  private serializePubkey(pubkey: Pubkey): number[] {
+    return Array.from(pubkey.bytes);
+  }
+
+  private serializeInstruction(instruction: Instruction): any {
+    return {
+      accounts: instruction.accounts.map(account => ({
+        is_signer: account.isSigner,
+        is_writable: account.isWritable,
+        pubkey: this.serializePubkey(account.pubkey)
+      })),
+      data: Array.from(instruction.data),
+      program_id: this.serializePubkey(instruction.programId)
+    };
+  }
+
+  private serializeMessage(message: Message): any {
+    return {
+      instructions: message.instructions.map(inst => this.serializeInstruction(inst)),
+      signers: message.signers.map(signer => this.serializePubkey(signer))
+    };
+  }
+
+  private serializeTransaction(transaction: RuntimeTransaction): any {
+    return {
+      message: this.serializeMessage(transaction.message),
+      signatures: transaction.signatures.map(sig => Array.from(Buffer.from(sig, 'hex'))),
+      version: transaction.version
+    };
+  }
+
+  async sendTransaction(transaction: RuntimeTransaction): Promise<string> {
+    const serializedTransaction = this.serializeTransaction(transaction);
+    return this.call<string>('send_transaction', [serializedTransaction]);
+  }
+
   async isNodeReady(): Promise<boolean> {
     return this.call<boolean>('is_node_ready', []);
   }
@@ -79,11 +117,7 @@ export class ArchRpcClient {
   async readAccountInfo(pubkey: Pubkey): Promise<AccountInfoResult> {
     return this.call<AccountInfoResult>('read_account_info', pubkey.serialize());
   }
-
-  async sendTransaction(transaction: RuntimeTransaction): Promise<string> {
-    return this.call<string>('send_transaction', [transaction]);
-  }
-
+  
   async sendTransactions(transactions: RuntimeTransaction[]): Promise<string[]> {
     return this.call<string[]>('send_transactions', [transactions]);
   }
@@ -108,21 +142,38 @@ export class ArchRpcClient {
     return this.call<ProcessedTransaction>('get_processed_transaction', txId);
   }
 
-  // New methods to handle Instructions and Messages
-  async createInstruction(programId: Pubkey, accounts: Pubkey[], data: number[]): Promise<Instruction> {
-    return this.call<Instruction>('create_instruction', [programId.serialize(), accounts.map(a => a.serialize()), data]);
+  private createInstruction(programId: Pubkey, accounts: AccountMeta[], data: number[]): Instruction {
+    return {
+      programId,
+      accounts,
+      data,
+    };
   }
 
-  async createMessage(signers: Pubkey[], instructions: Instruction[]): Promise<Message> {
-    return this.call<Message>('create_message', [signers.map(s => s.serialize()), instructions]);
+  private createMessage(signers: Pubkey[], instructions: Instruction[]): Message {
+    return {
+      signers,
+      instructions,
+    };
   }
 
   async createArchAccount(privateKey: Uint8Array, txid: string, vout: number): Promise<string> {
     const publicKey = secp256k1.getPublicKey(privateKey, true);
     const pubkey = new Pubkey(publicKey.slice(1)); // Remove the first byte (0x02 or 0x03)
 
-    const instruction = this.createCreateAccountInstruction(pubkey, txid, vout);
-    const message = await this.createMessage([pubkey], [instruction]);
+    const systemProgramId = new Pubkey(new Uint8Array(32).fill(0, 0, 31).fill(1, 31));
+    
+    const instruction = this.createInstruction(
+      systemProgramId,
+      [{
+        pubkey,
+        isSigner: true,
+        isWritable: true,
+      }],
+      this.encodeCreateAccountData(txid, vout)
+    );
+
+    const message = this.createMessage([pubkey], [instruction]);
     const transaction = await this.signTransaction(message, [privateKey]);
     
     return this.sendTransaction(transaction);
@@ -136,10 +187,7 @@ export class ArchRpcClient {
         throw new Error('Invalid private key');
       }
       
-      // Use secp256k1.schnorr.sign for Schnorr signatures
       const signature = await secp256k1.schnorr.sign(messageHash, signer);
-      
-      // Convert the signature to a hex string
       return Buffer.from(signature).toString('hex');
     }));
 
