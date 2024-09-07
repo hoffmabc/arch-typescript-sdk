@@ -42,7 +42,7 @@ export class ArchRpcClient {
   private async call<T>(method: string, params: any): Promise<T> {
     const payload = {
       jsonrpc: '2.0',
-      id: 'curlycurl',
+      id: Date.now().toString(),
       method,
       params,
     };
