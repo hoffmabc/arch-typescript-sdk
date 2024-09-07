@@ -136,7 +136,7 @@ export class ArchRpcClient {
    */
   private async signTransaction(message: Message, signers: Uint8Array[]): Promise<RuntimeTransaction> {
     const encodedMessage = this.encodeMessage(message);
-    const messageHash = sha256(encodedMessage);
+    const messageHash = sha256(sha256(encodedMessage));
     
     const signatures = await Promise.all(signers.map(async (signer) => {
       if (!secp256k1.utils.isValidPrivateKey(signer)) {
@@ -158,12 +158,12 @@ export class ArchRpcClient {
    */
   private serializeTransaction(transaction: RuntimeTransaction): any {
     return {
+      version: transaction.version,
+      signatures: transaction.signatures.map(sig => Array.from(Buffer.from(sig, 'hex'))),
       message: {
         signers: transaction.message.signers.map(signer => this.serializePubkey(signer)),
         instructions: transaction.message.instructions.map(inst => this.serializeInstruction(inst))
-      },
-      signatures: transaction.signatures.map(sig => Array.from(Buffer.from(sig, 'hex'))),
-      version: transaction.version
+      }
     };
   }
 
@@ -194,7 +194,7 @@ export class ArchRpcClient {
   }
 
   /**
-   * Encodes a message for signing.
+   * Encodes a message for signing and hashing.
    * @param message The message to encode.
    * @returns A Uint8Array representing the encoded message.
    */
