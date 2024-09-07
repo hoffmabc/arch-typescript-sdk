@@ -160,8 +160,7 @@ export class ArchRpcClient {
     return {
       message: {
         signers: transaction.message.signers.map(signer => this.serializePubkey(signer)),
-        instructions: transaction.message.instructions.map(inst => this.serializeInstruction(inst)),
-        hash: Buffer.from(sha256(this.encodeMessage(transaction.message))).toString('hex'),
+        instructions: transaction.message.instructions.map(inst => this.serializeInstruction(inst))
       },
       signatures: transaction.signatures.map(sig => Array.from(Buffer.from(sig, 'hex'))),
       version: transaction.version

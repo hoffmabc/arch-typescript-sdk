@@ -17,18 +17,27 @@ class Pubkey {
       throw new Error('Pubkey must be 32 bytes');
     }
   }
+
   static fromString(s: string): Pubkey {
-    const bytes = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      bytes[i] = parseInt(s.slice(i * 2, i * 2 + 2), 16);
+    const bytes = Buffer.from(s, 'hex');
+    if (bytes.length !== 32) {
+      throw new Error('Invalid pubkey string');
     }
     return new Pubkey(bytes);
   }
+
   toString(): string {
-    return Array.from(this.bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    return Buffer.from(this.bytes).toString('hex');
   }
+
   serialize(): number[] {
     return Array.from(this.bytes);
+  }
+
+  static systemProgram(): Pubkey {
+    const bytes = new Uint8Array(32);
+    bytes[31] = 1;
+    return new Pubkey(bytes);
   }
 }
 

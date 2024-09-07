@@ -115,7 +115,7 @@ describe('ArchRpcClient', () => {
       jsonrpc: '2.0',
       id: 'curlycurl',
       method: 'send_transaction',
-      params: [{
+      params: {
         message: {
           instructions: [{
             accounts: [{ is_signer: true, is_writable: true, pubkey: Array(32).fill(1) }],
@@ -126,7 +126,7 @@ describe('ArchRpcClient', () => {
         },
         signatures: [[170, 187, 204]],
         version: 0,
-      }],
+      },
     });
   });
 });
