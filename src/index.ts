@@ -13,6 +13,7 @@ import {
   Pubkey,
   AccountMeta
 } from './types';
+import { bytesToHex } from '@noble/hashes/utils';
 
 /**
  * ArchRpcClient provides methods to interact with the Arch blockchain network.
@@ -44,8 +45,9 @@ export class ArchRpcClient {
       jsonrpc: '2.0',
       id: Date.now().toString(),
       method,
-      params,
+      params
     };
+    console.log(payload);
     const response = await this.rpc.post('', payload);
     if (response.data.error) {
       throw new Error(response.data.error.message);
@@ -66,11 +68,17 @@ export class ArchRpcClient {
     const publicKey = secp256k1.getPublicKey(privateKey, true);
     const pubkey = new Pubkey(publicKey.slice(1)); // Remove the first byte (0x02 or 0x03)
 
-    const systemProgramId = Pubkey.systemProgram();
+    const systemprogram_id = Pubkey.systemProgram();
     const instruction = this.createCreateAccountInstruction(pubkey, txid, vout);
     const message = this.createMessage([pubkey], [instruction]);
-    const transaction = await this.signTransaction(message, [privateKey]);
+    const signatures = await this.signMessage(message, [privateKey]);
     
+    const transaction = {
+      message: message,
+      signatures: signatures,
+      version: 0
+    };
+
     return this.sendTransaction(transaction);
   }
 
@@ -83,11 +91,11 @@ export class ArchRpcClient {
    */
   private createCreateAccountInstruction(pubkey: Pubkey, txid: string, vout: number): Instruction {
     return {
-      programId: Pubkey.systemProgram(),
+      program_id: Pubkey.systemProgram(),
       accounts: [{
         pubkey: pubkey,
-        isSigner: true,
-        isWritable: true,
+        is_signer: true,
+        is_writable: true,
       }],
       data: this.encodeCreateAccountData(txid, vout),
     };
@@ -109,14 +117,26 @@ export class ArchRpcClient {
 
   // Transaction Methods
 
-  /**
-   * Sends a transaction to the Arch network.
-   * @param transaction The transaction to send.
-   * @returns A promise that resolves with the transaction ID.
-   */
-  async sendTransaction(transaction: RuntimeTransaction): Promise<string> {
-    const serializedTransaction = this.serializeTransaction(transaction);
-    return this.call<string>('send_transaction', serializedTransaction);
+  private serializeMessage(message: Message): number[] {
+    const parts: number[] = [];
+  
+    // Number of signers
+    parts.push(message.signers.length);
+  
+    // Signers
+    message.signers.forEach(signer => {
+      parts.push(...this.serializePubkey(signer));
+    });
+  
+    // Number of instructions
+    parts.push(message.instructions.length);
+  
+    // Instructions
+    message.instructions.forEach(instruction => {
+      parts.push(...this.serializeInstruction(instruction));
+    });
+  
+    return parts;
   }
 
   /**
@@ -125,7 +145,13 @@ export class ArchRpcClient {
    * @returns A promise that resolves with an array of transaction IDs.
    */
   async sendTransactions(transactions: RuntimeTransaction[]): Promise<string[]> {
-    return this.call<string[]>('send_transactions', [transactions]);
+    const serializedTransactions = transactions.map(tx => this.serializeTransaction(tx));
+    return this.call<string[]>('send_transactions', serializedTransactions);
+  }
+
+  async sendTransaction(transaction: RuntimeTransaction): Promise<string> {
+    const serializedTransaction = this.serializeTransaction(transaction);    
+    return this.call<string>('send_transaction', serializedTransaction);
   }
 
   /**
@@ -136,17 +162,34 @@ export class ArchRpcClient {
    */
   private async signTransaction(message: Message, signers: Uint8Array[]): Promise<RuntimeTransaction> {
     const encodedMessage = this.encodeMessage(message);
-    const messageHash = sha256(sha256(encodedMessage));
+    const messageHash = sha256(sha256(new Uint8Array(encodedMessage)));
     
     const signatures = await Promise.all(signers.map(async (signer) => {
       if (!secp256k1.utils.isValidPrivateKey(signer)) {
         throw new Error('Invalid private key');
       }
       const signature = await secp256k1.schnorr.sign(messageHash, signer);
-      return Buffer.from(signature).toString('hex');
+      return Buffer.from(signature).toString('base64');
     }));
-
+  
     return { version: 0, signatures, message };
+  }
+
+
+  // SignMessage 
+
+  async signMessage(message: Message, signers: Uint8Array[]): Promise<string[]> {
+    const encodedMessage = this.encodeMessage(message);
+    const messageHash = sha256(bytesToHex(sha256(new Uint8Array(encodedMessage))));
+    const signatures = await Promise.all(signers.map(async (signer) => {
+      if (!secp256k1.utils.isValidPrivateKey(signer)) {
+        throw new Error('Invalid private key');
+      }
+      console.log(`messageHash in hex: ${Buffer.from(messageHash).toString('hex')}`);
+      const signature = await secp256k1.schnorr.sign(messageHash, signer);
+      return bytesToHex(signature);
+    }));
+    return signatures;
   }
 
   // Serialization Methods
@@ -158,76 +201,111 @@ export class ArchRpcClient {
    */
   private serializeTransaction(transaction: RuntimeTransaction): any {
     return {
-      version: transaction.version,
-      signatures: transaction.signatures.map(sig => Array.from(Buffer.from(sig, 'hex'))),
       message: {
-        signers: transaction.message.signers.map(signer => this.serializePubkey(signer)),
-        instructions: transaction.message.instructions.map(inst => this.serializeInstruction(inst))
-      }
+          signers: transaction.message.signers.map((signer: { bytes: Iterable<unknown> | ArrayLike<unknown>; }) => Array.from(signer.bytes)),
+          instructions: transaction.message.instructions.map((inst: { program_id: { bytes: Iterable<unknown> | ArrayLike<unknown>; }; accounts: any[]; data: Iterable<unknown> | ArrayLike<unknown>; }) => ({
+            program_id: Array.from(inst.program_id.bytes),
+            accounts: inst.accounts.map(acc => ({
+              pubkey: Array.from(acc.pubkey.bytes),
+              is_signer: acc.is_signer,
+              is_writable: acc.is_writable
+            })),
+            data: Array.from(inst.data)
+          }))
+        },      
+      signatures: transaction.signatures.map(sig => Array.from(Buffer.from(sig, 'base64'))),
+      version: transaction.version,
     };
   }
 
-  /**
-   * Serializes a public key.
-   * @param pubkey The public key to serialize.
-   * @returns An array of numbers representing the serialized public key.
-   */
-  private serializePubkey(pubkey: Pubkey): number[] {
-    return Array.from(pubkey.bytes);
-  }
 
   /**
    * Serializes an instruction.
    * @param instruction The instruction to serialize.
    * @returns The serialized instruction object.
    */
-  private serializeInstruction(instruction: Instruction): any {
-    return {
-      program_id: this.serializePubkey(instruction.programId),
-      accounts: instruction.accounts.map(account => ({
-        pubkey: this.serializePubkey(account.pubkey),
-        is_signer: account.isSigner,
-        is_writable: account.isWritable
-      })),
-      data: Array.from(instruction.data)
-    };
+  private serializeInstruction(instruction: Instruction): number[] {
+    const parts: number[] = [];
+  
+    // Program ID
+    parts.push(...this.serializePubkey(instruction.program_id));
+  
+    // Number of accounts
+    parts.push(instruction.accounts.length);
+  
+    // Accounts
+    instruction.accounts.forEach(account => {
+      parts.push(...this.serializePubkey(account.pubkey));
+      parts.push(account.is_signer ? 1 : 0);
+      parts.push(account.is_writable ? 1 : 0);
+    });
+  
+    // Instruction data length (8 bytes, little-endian)
+    const dataLengthBuffer = new Uint8Array(8);
+    new DataView(dataLengthBuffer.buffer).setBigUint64(0, BigInt(instruction.data.length), true);
+    parts.push(...dataLengthBuffer);
+  
+    // Instruction data
+    parts.push(...instruction.data);
+  
+    return parts;
   }
 
-  /**
-   * Encodes a message for signing and hashing.
-   * @param message The message to encode.
-   * @returns A Uint8Array representing the encoded message.
-   */
-  private encodeMessage(message: Message): Uint8Array {
-    const instructionCount = message.instructions.length;
-    const signerCount = message.signers.length;
+  private serializePubkey(pubkey: Pubkey): number[] {
+    return Array.from(pubkey.bytes);
+  }
 
-    let totalLength = 4 + // 4 bytes for signer count
-                      32 * signerCount + // 32 bytes per signer pubkey
-                      4 + // 4 bytes for instruction count
-                      message.instructions.reduce((acc, instruction) => {
-                        return acc + this.getEncodedInstructionLength(instruction);
-                      }, 0);
+  private encodeMessage(message: Message): number[] {
+    const parts: number[] = [];
+  
+    // Number of signers
+    parts.push(message.signers.length);
+  
+    // Signers
+    message.signers.forEach(signer => {
+      parts.push(...this.serializePubkey(signer));
+      parts.push(...new Array(4).fill(0)); // 4 bytes padding after each pubkey
+    });
+  
+    // Number of instructions
+    parts.push(message.instructions.length);
+  
+    // Instructions
+    message.instructions.forEach(instruction => {
+      parts.push(...this.serializePubkey(instruction.program_id));
+      parts.push(...new Array(4).fill(0)); // 4 bytes padding after program ID
+      
+      // Number of accounts
+      parts.push(...this.serializeU32(instruction.accounts.length));
+      parts.push(...new Array(4).fill(0)); // 4 bytes padding before accounts
+  
+      // Accounts
+      instruction.accounts.forEach(account => {
+        parts.push(...this.serializeAccountMeta(account));
+      });
+  
+      // Data length
+      parts.push(...this.serializeU32(instruction.data.length));
+  
+      // Data
+      parts.push(...instruction.data);
+    });
+  
+    return parts;
+  }
 
-    const buffer = Buffer.alloc(totalLength);
-    let offset = 0;
+  private serializeU32(value: number): number[] {
+    const buffer = new Uint8Array(4);
+    new DataView(buffer.buffer).setUint32(0, value, true); // true for little-endian
+    return Array.from(buffer);
+  }
 
-    // Encode signer count and pubkeys
-    buffer.writeUInt32LE(signerCount, offset);
-    offset += 4;
-    for (const signer of message.signers) {
-      buffer.set(signer.bytes, offset);
-      offset += 32;
-    }
-
-    // Encode instruction count and instructions
-    buffer.writeUInt32LE(instructionCount, offset);
-    offset += 4;
-    for (const instruction of message.instructions) {
-      offset = this.encodeInstruction(instruction, buffer, offset);
-    }
-
-    return new Uint8Array(buffer);
+  private serializeAccountMeta(accountMeta: AccountMeta): number[] {
+    return [
+      ...this.serializePubkey(accountMeta.pubkey),
+      accountMeta.is_signer ? 1 : 0,
+      accountMeta.is_writable ? 1 : 0
+    ];
   }
 
   /**
@@ -251,7 +329,7 @@ export class ArchRpcClient {
    * @returns The new offset after encoding the instruction.
    */
   private encodeInstruction(instruction: Instruction, buffer: Buffer, offset: number): number {
-    buffer.set(instruction.programId.bytes, offset);
+    buffer.set(instruction.program_id.bytes, offset);
     offset += 32;
 
     buffer.writeUInt32LE(instruction.accounts.length, offset);
@@ -260,9 +338,9 @@ export class ArchRpcClient {
     for (const account of instruction.accounts) {
       buffer.set(account.pubkey.bytes, offset);
       offset += 32;
-      buffer.writeUInt8(account.isSigner ? 1 : 0, offset);
+      buffer.writeUInt8(account.is_signer ? 1 : 0, offset);
       offset += 1;
-      buffer.writeUInt8(account.isWritable ? 1 : 0, offset);
+      buffer.writeUInt8(account.is_writable ? 1 : 0, offset);
       offset += 1;
     }
 
@@ -278,13 +356,13 @@ export class ArchRpcClient {
 
   /**
    * Creates an instruction.
-   * @param programId The program ID for the instruction.
+   * @param program_id The program ID for the instruction.
    * @param accounts The accounts involved in the instruction.
    * @param data The data for the instruction.
    * @returns The created instruction.
    */
-  private createInstruction(programId: Pubkey, accounts: AccountMeta[], data: number[]): Instruction {
-    return { programId, accounts, data };
+  private createInstruction(program_id: Pubkey, accounts: AccountMeta[], data: number[]): Instruction {
+    return { program_id, accounts, data };
   }
 
   /**

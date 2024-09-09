@@ -11,7 +11,7 @@ enum Status {
   Processed
 }
 
-class Pubkey {
+export class Pubkey {
   constructor(public readonly bytes: Uint8Array) {
     if (bytes.length !== 32) {
       throw new Error('Pubkey must be 32 bytes');
@@ -43,7 +43,7 @@ class Pubkey {
 
 // Update Instruction to use Pubkey instead of PublicKey
 interface Instruction {
-  programId: Pubkey;
+  program_id: Pubkey;
   accounts: AccountMeta[];
   data: number[];
 }
@@ -51,8 +51,8 @@ interface Instruction {
 // Update AccountMeta to use Pubkey
 interface AccountMeta {
   pubkey: Pubkey;
-  isSigner: boolean;
-  isWritable: boolean;
+  is_signer: boolean;
+  is_writable: boolean;
 }
 
 // Update Message to use Pubkey
@@ -118,4 +118,4 @@ export type {
   Message,
   AccountMeta
 };
-export { Status, Pubkey, Signature };
+export { Status, Signature };
