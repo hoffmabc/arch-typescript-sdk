@@ -68,7 +68,6 @@ export class ArchRpcClient {
     const publicKey = secp256k1.getPublicKey(privateKey, true);
     const pubkey = new Pubkey(publicKey.slice(1)); // Remove the first byte (0x02 or 0x03)
 
-    const systemprogram_id = Pubkey.systemProgram();
     const instruction = this.createCreateAccountInstruction(pubkey, txid, vout);
     const message = this.createMessage([pubkey], [instruction]);
     const signatures = await this.signMessage(message, [privateKey]);
@@ -82,6 +81,27 @@ export class ArchRpcClient {
     return this.sendTransaction(transaction);
   }
 
+  // Transfer ownership of an account to a program
+  async transferAccountOwnership(privateKey: Uint8Array, programPubkeyHex: string): Promise<string> {
+    const publicKey = secp256k1.getPublicKey(privateKey, true);
+    const accountPubkey = new Pubkey(publicKey.slice(1));
+
+    // Convert programPubkey from hex string to Uint8Array
+    const programPubkeyBytes = hexToBytes(programPubkeyHex);
+    const programPubkey = new Pubkey(programPubkeyBytes);
+    
+    const instruction = this.createTransferAccountOwnershipInstruction(accountPubkey, programPubkey);
+    const message = this.createMessage([accountPubkey], [instruction]);
+    const signatures = await this.signMessage(message, [privateKey]);
+
+    const transaction = {
+      version: 0,
+      signatures: signatures,
+      message: message
+    };
+
+    return this.sendTransaction(transaction);
+  }
   /**
    * Creates an instruction for creating a new account.
    * @param pubkey The public key of the new account.
@@ -101,6 +121,18 @@ export class ArchRpcClient {
     };
   }
 
+  private createTransferAccountOwnershipInstruction(accountPubkey: Pubkey, programPubkey: Pubkey ): Instruction {
+    return {
+      program_id: Pubkey.systemProgram(),
+      accounts: [{
+        pubkey: accountPubkey,
+        is_signer: true,
+        is_writable: true,
+      }],
+      data: this.encodeTransferAccountOwnershipData(programPubkey),
+    };
+  }
+
   /**
    * Encodes the data for creating a new account.
    * @param txid The transaction ID associated with the account creation.
@@ -114,6 +146,15 @@ export class ArchRpcClient {
     const txidBytes = hexToBytes(txid);
     new Uint8Array(buffer).set(txidBytes, 1);
     view.setUint32(33, vout, true);
+    return Array.from(new Uint8Array(buffer));
+  }
+
+  private encodeTransferAccountOwnershipData(programPubkey: Pubkey): number[] {
+    const buffer = new ArrayBuffer(33);
+    const view = new DataView(buffer);
+    view.setUint8(0, 3); // Instruction type (3 for TransferAccountOwnership)
+    const programPubkeyBytes = Array.from(programPubkey.bytes);
+    new Uint8Array(buffer).set(programPubkeyBytes, 1);
     return Array.from(new Uint8Array(buffer));
   }
 
