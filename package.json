@@ -1,6 +1,6 @@
 {
   "name": "arch-typescript-sdk",
-  "version": "0.0.40",
+  "version": "0.0.63",
   "description": "This is a basic typescript SDK for interacting with Arch Network",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

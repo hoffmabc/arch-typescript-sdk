@@ -1,15 +1,4 @@
-import { PublicKey } from '@solana/web3.js'; // Using PublicKey instead of Signature
-
-type Signature = string; // Define Signature as a string type
-
-// NodePubkey type
-type NodePubkey = number[]; // Equivalent to Vec<u8> in Rust
-
-// Status enum
-enum Status {
-  Processing,
-  Processed
-}
+import { Buffer } from 'buffer';
 
 export class Pubkey {
   constructor(public readonly bytes: Uint8Array) {
@@ -41,48 +30,45 @@ export class Pubkey {
   }
 }
 
-// Update Instruction to use Pubkey instead of PublicKey
-interface Instruction {
+export type NodePubkey = number[];
+
+export enum Status {
+  Processing,
+  Processed
+}
+
+export type Signature = string;
+
+export interface Instruction {
   program_id: Pubkey;
   accounts: AccountMeta[];
   data: number[];
 }
 
-// Update AccountMeta to use Pubkey
-interface AccountMeta {
+export interface AccountMeta {
   pubkey: Pubkey;
   is_signer: boolean;
   is_writable: boolean;
 }
 
-// Update Message to use Pubkey
-interface Message {
+export interface Message {
   signers: Pubkey[];
   instructions: Instruction[];
 }
 
-  // Message type
-  interface Message {
-    signers: Pubkey[];
-    instructions: Instruction[];
-  }
-
-// RuntimeTransaction type
-interface RuntimeTransaction {
+export interface RuntimeTransaction {
   version: number;
   signatures: Signature[];
   message: Message;
 }
 
-// ProcessedTransaction type
-interface ProcessedTransaction {
+export interface ProcessedTransaction {
   runtime_transaction: RuntimeTransaction;
   status: Status;
   bitcoin_txids: string[];
 }
 
-// Block type
-interface Block {
+export interface Block {
   transactions: string[];
   previous_block_hash: string;
   transaction_count: number;
@@ -90,32 +76,16 @@ interface Block {
   merkle_root: string;
 }
 
-// ArchNode type
-interface ArchNode {
+export interface ArchNode {
   url: string;
   pubkey: NodePubkey;
   node_id: number;
   is_ready: boolean;
 }
 
-// AccountInfoResult type
-interface AccountInfoResult {
+export interface AccountInfoResult {
   owner: string;
   data: number[];
   utxo: string;
   is_executable: boolean;
 }
-
-// Export all types
-export type {
-  NodePubkey,
-  RuntimeTransaction,
-  ProcessedTransaction,
-  Block,
-  ArchNode,
-  AccountInfoResult,
-  Instruction,
-  Message,
-  AccountMeta
-};
-export { Status, Signature };
