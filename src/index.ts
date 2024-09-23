@@ -102,6 +102,41 @@ export class ArchRpcClient {
 
     return this.sendTransaction(transaction);
   }
+
+  // Call a program by creating a custom instruction using the array of accounts and data we send
+  async callProgram(privateKey: Uint8Array, programPubkeyHex: string, data: number[]): Promise<string> {
+    const publicKey = secp256k1.getPublicKey(privateKey, true);
+    const accountPubkey = new Pubkey(publicKey.slice(1));
+
+    // Convert programPubkey from hex string to Uint8Array
+    const programPubkeyBytes = hexToBytes(programPubkeyHex);
+    const programPubkey = new Pubkey(programPubkeyBytes);
+
+    const instruction = this.createCallProgramInstruction(accountPubkey, programPubkey, data);
+    const message = this.createMessage([accountPubkey], [instruction]);
+    const signatures = await this.signMessage(message, [privateKey]);
+    const transaction = {
+      version: 0,
+      signatures: signatures,
+      message: message
+    };
+    return this.sendTransaction(transaction);
+  }
+
+  private createCallProgramInstruction(accountPubkey: Pubkey, programPubkey: Pubkey, data: number[]): Instruction {
+    return {
+      program_id: programPubkey,
+      accounts: [
+        {
+          pubkey: accountPubkey,
+          is_signer: true,
+          is_writable: true,
+        }
+      ],
+      data: data,
+    };
+  }
+
   /**
    * Creates an instruction for creating a new account.
    * @param pubkey The public key of the new account.
@@ -146,7 +181,7 @@ export class ArchRpcClient {
     const txidBytes = hexToBytes(txid);
     new Uint8Array(buffer).set(txidBytes, 1);
     view.setUint32(33, vout, true);
-    return Array.from(new Uint8Array(buffer));
+    return Array.from(new Uint8Array(buffer));  
   }
 
   private encodeTransferAccountOwnershipData(programPubkey: Pubkey): number[] {
