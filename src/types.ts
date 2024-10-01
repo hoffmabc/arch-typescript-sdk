@@ -84,8 +84,22 @@ export interface ArchNode {
 }
 
 export interface AccountInfoResult {
-  owner: string;
+  owner: Pubkey;
   data: number[];
   utxo: string;
   is_executable: boolean;
 }
+
+export interface AccountFilter {
+  memcmp?: {
+    offset: number;
+    bytes: string; // hex-encoded bytes
+  };
+  dataSize?: number;
+}
+
+export interface ProgramAccount {
+  pubkey: Pubkey;
+  account: AccountInfoResult;
+}
+

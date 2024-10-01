@@ -11,7 +11,9 @@ import {
   Instruction,
   Message,
   Pubkey,
-  AccountMeta
+  AccountMeta,
+  AccountFilter,
+  ProgramAccount
 } from './types';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 
@@ -542,6 +544,16 @@ export class ArchRpcClient {
    */
   async getProcessedTransaction(txId: string): Promise<ProcessedTransaction> {
     return this.call<ProcessedTransaction>('get_processed_transaction', txId);
+  }
+
+  /**
+   * Gets the program accounts for a given program ID.
+   * @param programId The program ID to fetch accounts for.
+   * @param filters Optional filters to apply when fetching accounts.
+   * @returns A promise that resolves with an array of program accounts.
+   */
+  async getProgramAccounts(programId: Pubkey, filters?: AccountFilter[]): Promise<ProgramAccount[]> {
+    return this.call<ProgramAccount[]>('get_program_accounts', [programId.serialize(), filters]);
   }
 }
 

@@ -44,6 +44,7 @@ example();
 - `getBlockHash(height: number): Promise<string>`
 - `getBlock(hash: string): Promise<Block>`
 - `getProcessedTransaction(txId: string): Promise<ProcessedTransaction>`
+- `getProgramAccounts(programId: Pubkey, filters?: AccountFilter[]): Promise<ProgramAccount[]>`
 
 ## Contributing
 
